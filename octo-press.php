@@ -37,43 +37,63 @@ class OctoPress {
 			'background' => '#996600',
 			'buzz' => '#FFAA00',
 			'quiet' => '#000000',
+			'ticks' => '7',
 		);
 		$atts = shortcode_atts($defaults, $atts);
+
+		$content = wp_strip_all_tags($content);
 
 
 		// Load all the octo script files. Loading them in
 		// the shortcode instead of wp_enqueue_scripts ensures
 		// that the JS is only loaded if it is actually needed
-		wp_enqueue_script('octo-core', plugins_url('js/octo.js', __FILE__), array('jquery'), '1.0', TRUE);
-		wp_enqueue_script('octo-compiler', plugins_url('js/compiler.js', __FILE__), array('octo-core'), '1.0', TRUE);
-		wp_enqueue_script('octo-emulator', plugins_url('js/emulator.js', __FILE__), array('octo-core'), '1.0', TRUE);
-
-
-		//dump($args);
-		//dump(plugins_url('js/script.js', __FILE__));
+		wp_enqueue_script('octo-core', plugins_url('js/octo.js', __FILE__), array(), '1.0', FALSE);
+		wp_enqueue_script('octo-compiler', plugins_url('js/compiler.js', __FILE__), array('octo-core'), '1.0', FALSE);
+		wp_enqueue_script('octo-emulator', plugins_url('js/emulator.js', __FILE__), array('octo-core'), '1.0', FALSE);
+		wp_enqueue_script('octo-press', plugins_url('js/octo-press.js', __FILE__), array('jquery', 'octo-core', 'octo-compiler', 'octo-emulator'), '1.0', FALSE);
 
 
 		// Reminder: must store all shortcode HTML
 		// in a variable, and return it at the end (do not echo)
 		$output = '';
-		$output .= '<h4>Canvas:</h4>';
-		$output .= '<canvas id="target" width="640" height="320"></canvas>';
-		$output .= '<h4>End Canvas</h4>';
+
+
+		// output the things that octo.js expects to
+		// exist, just to temporarily avoid tons of JS errors
+		$output .= '<div id="input"></div>';
+		$output .= '<div id="output"></div>';
+		$output .= '<div id="status"></div>';
+		$output .= '<div id="emulator"></div>';
+
+
+		// this canvas holds the running Octo program
 		$output .= '<style>canvas#target{border: solid 1px black;}</style>';
+		$output .= '<div>';
+		$output .= '<canvas id="target" width="640" height="320"></canvas>';
+		$output .= '</div>';
 
-		$output .= '<br/><hr/><br/>';
-		$output .= '<h4>Source Code:</h4>';
-		$output .= '<pre style="background: ' . $atts['quiet'] . '; color: ' . $atts['fill'] . ';">';
-		$output .= wp_strip_all_tags($content);
-		$output .= '</pre>';
 
-		/*
-		var TICKS_PER_FRAME = 7;
-		var FILL_COLOR  = "#FFCC00";
-		var BACK_COLOR  = "#996600";
-		var BUZZ_COLOR  = "#FFAA00";
-		var QUIET_COLOR = "#000000";
-		*/
+		// store the source code in a hidden div for later retrieval
+		// (good enough, if hack-y, solution for now)
+		$output .= '<div id="octo-source" style="display: none !important;">' . wp_strip_all_tags($content) . '</div>';
+
+
+		// Once the document loads, call our customized octoPressRun
+		// function to grab the source code from the above div and run it.
+		//
+		// Also, we overwrite the default colors with the ones from
+		// the shortcode attributes
+		$output .= '<script>';
+		$output .= 'document.addEventListener( "DOMContentLoaded", function() {';
+		$output .= '  TICKS_PER_FRAME = "' . $atts['ticks']      . '";';
+		$output .= '  FILL_COLOR      = "' . $atts['fill']       . '";';
+		$output .= '  BACK_COLOR      = "' . $atts['background'] . '";';
+		$output .= '  BUZZ_COLOR      = "' . $atts['buzz']       . '";';
+		$output .= '  QUIET_COLOR     = "' . $atts['quiet']      . '";';
+		$output .= '  octoPressRun( document.getElementById( "octo-source" ).innerHTML);';
+		$output .= '});';
+		$output .= '</script>';
+
 
 		return $output;
 	}
