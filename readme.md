@@ -18,6 +18,7 @@ Octo is a high-level assembler for the Chip8 virtual machine written by JohnEarn
 
 ### Example Usage
 Just wrap Octo code with the [octo] ... [/octo] shortcode.
+
 	[octo]
 	: smile
 		0b00100100
